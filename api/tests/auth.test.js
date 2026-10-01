@@ -31,6 +31,26 @@ test('health endpoint reports configuration without exposing secrets', async () 
   assert.deepEqual(await response.json(), { ok: true, authConfigured: true });
 });
 
+test('session endpoint explains missing deployment configuration without allowing login', async () => {
+  const saved = {
+    ADMIN_USERNAME: process.env.ADMIN_USERNAME,
+    ADMIN_PASSWORD_HASH: process.env.ADMIN_PASSWORD_HASH,
+    SESSION_SECRET: process.env.SESSION_SECRET,
+    MONGODB_URI: process.env.MONGODB_URI,
+  };
+  delete process.env.ADMIN_USERNAME;
+  delete process.env.ADMIN_PASSWORD_HASH;
+  delete process.env.SESSION_SECRET;
+  delete process.env.MONGODB_URI;
+  try {
+    const response = await fetch(`${baseUrl}/api/auth/session`);
+    assert.equal(response.status, 503);
+    assert.match((await response.json()).error, /configurado/);
+  } finally {
+    Object.assign(process.env, saved);
+  }
+});
+
 test('anonymous sessions are rejected from data routes', async () => {
   const response = await fetch(`${baseUrl}/api/quotes`);
   assert.equal(response.status, 401);
