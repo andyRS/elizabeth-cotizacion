@@ -71,3 +71,30 @@
 @media(max-width:420px){.quote-wizard-step strong{font-size:8px}.quote-wizard-step small{font-size:6px}.quote-wizard-review-head,.quote-wizard-review-row{grid-template-columns:minmax(90px,1.2fr) minmax(80px,1fr) minmax(85px,1fr);gap:6px;padding:9px 4px}.quote-wizard-review-head>:nth-child(3),.quote-wizard-review-row>:nth-child(3){display:none}.quote-wizard-client-row{grid-template-columns:1fr}.quote-wizard-client-row>.btn{justify-self:start}.quote-wizard-date-fields{grid-template-columns:1fr}.quote-wizard-final-actions .btn{padding-inline:9px;font-size:9px}}
 @media(prefers-reduced-motion:reduce){.quote-wizard-panel{animation:none}}
 @media(max-width:720px){.quote-wizard-modal{height:100vh;height:100dvh}.quote-wizard-header{padding-top:max(13px,env(safe-area-inset-top))}.quote-wizard-content{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}.quote-wizard-footer{padding-bottom:max(11px,env(safe-area-inset-bottom))}.quote-wizard-material-fields>.field:nth-child(2),.quote-wizard-material-fields>.field:nth-child(3),.quote-wizard-material-fields>.field:nth-child(4),.quote-wizard-material-fields>.field:nth-child(5){min-width:0}.quote-wizard-new-client-fields{grid-template-columns:1fr}.quote-wizard-new-client-heading{align-items:flex-start;flex-direction:column}}
+.quote-wizard-title-group .eyebrow,.quote-wizard-panel-heading>span{font-size:10px;letter-spacing:0}
+.quote-wizard-title-group h1{font-size:20px}
+.quote-wizard-step small{font-size:9px;letter-spacing:0}
+.quote-wizard-step strong{font-size:12px}
+.quote-wizard-panel-heading h2{font-size:26px}
+.quote-wizard-panel-heading p{font-size:13px}
+.quote-wizard-modal .field-label{font-size:12px}
+.quote-wizard-modal .field-hint{font-size:11px}
+.quote-wizard-modal .field input,.quote-wizard-modal .field select,.quote-wizard-modal .select-wrap select,.quote-wizard-modal .field textarea{font-size:14px;min-height:44px}
+.quote-wizard-modal .field textarea{min-height:76px}
+.quote-wizard-modal .btn{min-height:44px;font-size:12px}
+.quote-wizard-new-client-heading{font-size:13px}
+.quote-wizard-selected-client strong{font-size:12px}
+.quote-wizard-selected-client small{font-size:11px}
+.quote-wizard-material-heading>strong{font-size:14px}
+.quote-wizard-material-fields .field-hint{font-size:11px}
+.quote-wizard-line-total{font-size:12px}
+.quote-wizard-line-total strong{font-size:13px}
+.quote-wizard-review-head{font-size:10px;letter-spacing:0}
+.quote-wizard-review-row,.quote-wizard-review-row strong{font-size:12px}
+.quote-wizard-totals>div,.quote-wizard-totals strong{font-size:12px}
+.quote-wizard-totals .quote-wizard-grand-total{font-size:13px}
+.quote-wizard-totals .quote-wizard-grand-total strong{font-size:17px}
+.quote-wizard-extras,.quote-wizard-item-options{font-size:12px}
+.quote-wizard-empty-materials,.quote-wizard-error{font-size:12px}
+@media(max-width:720px){.quote-wizard-step strong{font-size:11px}.quote-wizard-panel-heading h2{font-size:23px}.quote-wizard-review-head,.quote-wizard-review-row{font-size:11px}}
+@media(max-width:420px){.quote-wizard-step small{font-size:8px}.quote-wizard-step strong{font-size:10px}.quote-wizard-panel-heading h2{font-size:21px}.quote-wizard-modal .field input,.quote-wizard-modal .field select,.quote-wizard-modal .select-wrap select{font-size:14px}.quote-wizard-review-head,.quote-wizard-review-row{font-size:10px}}

@@ -69,14 +69,14 @@ async function printHeader(doc, quote, client, settings) {
   }
   doc.setTextColor(...DARK_GREEN);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
+  doc.setFontSize(11);
   doc.text('C O T I Z A C I Ó N', 17, 34);
   doc.setDrawColor(...GREEN);
   doc.setLineWidth(0.8);
   doc.line(16, 37, 99, 37);
   doc.setTextColor(...MUTED);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
+  doc.setFontSize(8.5);
   doc.text(settings.businessName || 'Elizabeth Méndez', 17, 42);
   doc.text(settings.phone || settings.email || 'Costura y confección', 17, 46);
 
@@ -97,11 +97,11 @@ async function printHeader(doc, quote, client, settings) {
     }
     doc.setTextColor(...GREEN);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7.5);
+    doc.setFontSize(8.5);
     doc.text(label, boxX + 5, y);
     doc.setTextColor(...INK);
     doc.setFont('times', 'italic');
-    doc.setFontSize(value.length > 23 ? 8 : 9.5);
+    doc.setFontSize(value.length > 23 ? 8.5 : 10);
     doc.text(doc.splitTextToSize(value, 37)[0], boxX + 28, y, { maxWidth: 36 });
   });
 }
@@ -123,9 +123,9 @@ export async function createQuotePdf(quote, client, settingsOverride) {
       return [formatQuantity(item.quantity, item.unit || 'yardas'), item.description, formatMoney(item.price, quote.currency), formatMoney(base - discount, quote.currency)];
     }),
     theme: 'grid',
-    headStyles: { fillColor: GREEN, textColor: 255, font: 'helvetica', fontStyle: 'bold', fontSize: 8, cellPadding: 3.2 },
+    headStyles: { fillColor: GREEN, textColor: 255, font: 'helvetica', fontStyle: 'bold', fontSize: 9, cellPadding: 3.5 },
     alternateRowStyles: { fillColor: [247, 251, 247] },
-    styles: { font: 'helvetica', fontSize: 7.5, cellPadding: 2.4, textColor: INK, lineColor: LIGHT_GREEN, lineWidth: 0.25, minCellHeight: 9, overflow: 'linebreak' },
+    styles: { font: 'helvetica', fontSize: 9, cellPadding: 3, textColor: INK, lineColor: LIGHT_GREEN, lineWidth: 0.25, minCellHeight: 10, overflow: 'linebreak' },
     columnStyles: { 0: { halign: 'center' }, 2: { halign: 'right' }, 3: { halign: 'right', fontStyle: 'bold' } },
     margin: { left: 15, right: 15 },
   });
@@ -140,7 +140,7 @@ export async function createQuotePdf(quote, client, settingsOverride) {
     startY: doc.lastAutoTable.finalY + 6,
     body: summaryRows.map(([label, amount]) => [label, formatMoney(amount, quote.currency)]),
     theme: 'plain',
-    styles: { font: 'helvetica', fontSize: 7.5, cellPadding: 1.5, textColor: INK, lineColor: LIGHT_GREEN, lineWidth: 0.25 },
+    styles: { font: 'helvetica', fontSize: 9, cellPadding: 2, textColor: INK, lineColor: LIGHT_GREEN, lineWidth: 0.25 },
     columnStyles: { 1: { halign: 'right' } },
     margin: { left: pageWidth - 15 - 88, right: 15 },
     didParseCell(data) {
@@ -148,7 +148,7 @@ export async function createQuotePdf(quote, client, settingsOverride) {
         data.cell.styles.fontStyle = 'bold';
         data.cell.styles.textColor = DARK_GREEN;
         data.cell.styles.fillColor = PALE_GREEN;
-        data.cell.styles.fontSize = 10;
+        data.cell.styles.fontSize = 12;
       }
     },
   });
@@ -168,7 +168,7 @@ export async function createQuotePdf(quote, client, settingsOverride) {
     const rightWidth = pageWidth - rightX - 15;
     doc.setTextColor(...GREEN);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8.5);
+    doc.setFontSize(9.5);
     doc.text('DISEÑO DEL VESTIDO', leftX + 1, photoY);
     outlinedBox(doc, leftX, photoY + 3, leftWidth, 67, 2.5);
     if (!addCoverImage(doc, quote.garmentImage, leftX + 2, photoY + 5, leftWidth - 4, 63)) {
@@ -179,7 +179,7 @@ export async function createQuotePdf(quote, client, settingsOverride) {
     }
     doc.setTextColor(...GREEN);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8.5);
+    doc.setFontSize(9.5);
     doc.text('MATERIALES / DETALLES', rightX + 1, photoY);
     const detailY = photoY + 3;
     const detailWidth = (rightWidth - 3) / 2;
@@ -200,11 +200,11 @@ export async function createQuotePdf(quote, client, settingsOverride) {
       if (!text) continue;
       doc.setTextColor(...GREEN);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8);
+      doc.setFontSize(9);
       doc.text(label, 15, y);
       doc.setTextColor(...MUTED);
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7.5);
+      doc.setFontSize(8.5);
       const lines = doc.splitTextToSize(text, pageWidth - 30);
       doc.text(lines, 15, y + 4);
       y += 6 + lines.length * 3.5;
