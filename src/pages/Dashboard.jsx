@@ -26,7 +26,7 @@ export default function Dashboard() {
       .finally(() => setLoading(false));
   }, []);
   const rate = (quoteCurrency) => CURRENCY_INFO[quoteCurrency]?.rate || 1;
-  const amountInCurrency = (quote) => quoteTotals(quote.items).total * rate(quote.currency) / rate(currency);
+  const amountInCurrency = (quote) => quoteTotals(quote.items, quote.labor).total * rate(quote.currency) / rate(currency);
   const stats = {
     total: quotes.reduce((sum, quote) => sum + amountInCurrency(quote), 0),
     pending: quotes.filter((quote) => ['pending','sent'].includes(quote.status)).length,

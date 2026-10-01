@@ -16,19 +16,22 @@ export function formatMoney(amount, currency = 'DOP') {
   return `${currency === 'DOP' ? 'RD$' : 'US$'} ${formatted}`;
 }
 
-export function quoteTotals(items = []) {
-  return items.reduce((totals, item) => {
+export function quoteTotals(items = [], labor = 0) {
+  const totals = items.reduce((result, item) => {
     const quantity = Math.max(0, Number(item.quantity) || 0);
     const price = Math.max(0, Number(item.price) || 0);
     const base = quantity * price;
     const discount = base * Math.min(100, Math.max(0, Number(item.discount) || 0)) / 100;
     const tax = (base - discount) * Math.max(0, Number(item.tax) || 0) / 100;
-    totals.subtotal += base;
-    totals.discount += discount;
-    totals.tax += tax;
-    totals.total += base - discount + tax;
-    return totals;
+    result.subtotal += base;
+    result.discount += discount;
+    result.tax += tax;
+    result.total += base - discount + tax;
+    return result;
   }, { subtotal: 0, discount: 0, tax: 0, total: 0 });
+  totals.labor = Math.max(0, Number(labor) || 0);
+  totals.total += totals.labor;
+  return totals;
 }
 
 export function dateOnly(date = new Date()) {

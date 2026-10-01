@@ -23,7 +23,7 @@ function clientDto(client) {
 function quoteDto(quote) {
   const value = quote.toObject ? quote.toObject() : quote;
   const items = value.items || [];
-  return { ...value, id: String(value._id), _id: undefined, __v: undefined, clientId: String(value.clientId), ...quoteTotals(items) };
+  return { ...value, id: String(value._id), _id: undefined, __v: undefined, clientId: String(value.clientId), ...quoteTotals(items, value.labor) };
 }
 
 function settingsDto(settings) {
@@ -45,7 +45,7 @@ function withoutMongoMeta(value) {
   return result;
 }
 const clientFields = ['name', 'businessName', 'taxId', 'phone', 'whatsapp', 'email', 'address', 'city', 'notes'];
-const quoteFields = ['number', 'clientId', 'date', 'validUntil', 'currency', 'status', 'items', 'notes', 'terms'];
+const quoteFields = ['number', 'clientId', 'date', 'validUntil', 'currency', 'status', 'items', 'labor', 'garmentImage', 'detailImages', 'notes', 'terms'];
 const settingsFields = ['businessName', 'tradeName', 'taxId', 'phone', 'whatsapp', 'email', 'address', 'city', 'country', 'logo', 'prefix', 'nextNumber', 'defaultCurrency', 'defaultTax', 'defaultValidity', 'defaultNotes', 'defaultTerms'];
 function errorMessage(error) {
   if (error?.name === 'ValidationError' || error?.name === 'StrictModeError' || error?.name === 'CastError') return error.message;
@@ -117,6 +117,8 @@ router.get('/quotes/:id', asyncRoute(async (req, res) => {
 }));
 router.post('/quotes', asyncRoute(async (req, res) => {
   const payload = pick(req.body, quoteFields);
+  if (payload.garmentImage && !/^data:image\/(jpeg|png);base64,/.test(payload.garmentImage)) return res.status(400).json({ error: 'La imagen del vestido debe ser JPG o PNG.' });
+  if (Array.isArray(payload.detailImages) && payload.detailImages.some((image) => typeof image !== 'string' || !/^data:image\/(jpeg|png);base64,/.test(image))) return res.status(400).json({ error: 'Las imágenes de materiales deben ser JPG o PNG.' });
   if (!validId(String(payload.clientId || ''))) return res.status(400).json({ error: 'Selecciona un cliente válido.' });
   if (!await Client.exists({ _id: payload.clientId })) return res.status(400).json({ error: 'El cliente seleccionado ya no existe.' });
   const quote = await Quote.create(payload);
@@ -125,6 +127,8 @@ router.post('/quotes', asyncRoute(async (req, res) => {
 router.put('/quotes/:id', asyncRoute(async (req, res) => {
   if (!validId(req.params.id)) return res.status(400).json({ error: 'Identificador de cotización inválido.' });
   const payload = pick(req.body, quoteFields);
+  if (payload.garmentImage && !/^data:image\/(jpeg|png);base64,/.test(payload.garmentImage)) return res.status(400).json({ error: 'La imagen del vestido debe ser JPG o PNG.' });
+  if (Array.isArray(payload.detailImages) && payload.detailImages.some((image) => typeof image !== 'string' || !/^data:image\/(jpeg|png);base64,/.test(image))) return res.status(400).json({ error: 'Las imágenes de materiales deben ser JPG o PNG.' });
   if (payload.clientId && !validId(String(payload.clientId))) return res.status(400).json({ error: 'Selecciona un cliente válido.' });
   if (payload.clientId && !await Client.exists({ _id: payload.clientId })) return res.status(400).json({ error: 'El cliente seleccionado ya no existe.' });
   const quote = await Quote.findByIdAndUpdate(req.params.id, payload, { new: true, runValidators: true, strict: 'throw' });
