@@ -3,7 +3,7 @@ import { Link, useNavigate, useOutletContext, useParams, useSearchParams } from 
 import { ArrowLeft, CalendarDays, Check, CirclePlus, FileDown, Eye, Plus, ReceiptText, Trash2, UserRoundPlus } from 'lucide-react';
 import { Button, Card, Field, PageHeader, Select, Spinner } from '../components/ui.jsx';
 import ClientModal from '../components/ClientModal.jsx';
-import NewQuoteStartModal from '../components/NewQuoteStartModal.jsx';
+import QuoteWizardModal from '../components/QuoteWizardModal.jsx';
 import PhotoAttachments from '../components/PhotoAttachments.jsx';
 import { dataStore } from '../services/dataStore.js';
 import { downloadQuotePdf } from '../services/pdfService.js';
@@ -15,10 +15,8 @@ function blankQuote(settings,number){const date=dateOnly();return {number,client
 export default function QuoteForm(){
   const {id}=useParams();const navigate=useNavigate();const {notify}=useOutletContext();const [params]=useSearchParams();
   const duplicateId=params.get('duplicate');
-  const [showNewQuoteStart,setShowNewQuoteStart]=useState(()=>!id&&!duplicateId);
   const [settings,setSettings]=useState(DEFAULT_SETTINGS);const [form,setForm]=useState(null);const [clients,setClients]=useState([]);const [loading,setLoading]=useState(true);const [showClient,setShowClient]=useState(false);const [error,setError]=useState('');
   useEffect(()=>{
-    setShowNewQuoteStart(!id&&!duplicateId);
     let active=true;
     Promise.all([dataStore.settings.get(),dataStore.clients.list(),id?dataStore.quotes.get(id):duplicateId?dataStore.quotes.get(duplicateId):Promise.resolve(null)])
       .then(async([savedSettings,clientRecords,original])=>{
@@ -66,6 +64,6 @@ export default function QuoteForm(){
         <Card className="form-section labor-section"><div className="form-section-title"><span className="section-icon"><ReceiptText size={18}/></span><div><h2>Mano de obra</h2><p>Se sumará al costo de materiales en el total de la cotización.</p></div></div><div className="labor-field"><Field label={`Costo de mano de obra (${form.currency})`}><input type="number" min="0" step="0.01" value={form.labor ?? 0} onChange={(event)=>update('labor',event.target.value)} aria-label="Costo de mano de obra"/></Field><strong>{formatMoney(form.labor,form.currency)}</strong></div></Card>
       {error&&<div className="form-error-banner" role="alert">{error}</div>}
       <div className="form-actions-sticky"><Link className="btn btn-ghost" to="/cotizaciones"><ArrowLeft size={16}/> Cancelar</Link><div><Button type="button" variant="outline" onClick={()=>saveThenPreview('draft')}><Eye size={16}/> Vista previa</Button><Button type="button" variant="outline" onClick={saveThenPdf}><FileDown size={16}/> Generar PDF</Button><Button type="button" variant="outline" onClick={()=>save('draft')}>Guardar borrador</Button><Button type="button" onClick={()=>save('pending')}><Check size={16}/> Guardar cotización</Button></div></div>
-    </form>{showClient&&<ClientModal onClose={()=>setShowClient(false)} onSaved={createClient}/>} {showNewQuoteStart&&!id&&!duplicateId&&<NewQuoteStartModal onClose={()=>setShowNewQuoteStart(false)} onCancel={()=>navigate('/cotizaciones')}/>}
+    </form><QuoteWizardModal form={form} clients={clients} selectedClient={selectedClient} totals={totals} error={error} isEditing={Boolean(id)} onClose={()=>navigate('/cotizaciones')} onCreateClient={()=>setShowClient(true)} onUpdate={update} onUpdateItem={updateItem} onAddLine={addLine} onRemoveLine={removeLine} onPhotosChange={(images)=>setForm((current)=>({...current,...images}))} onSaveThenPreview={saveThenPreview}/>{showClient&&<ClientModal onClose={()=>setShowClient(false)} onSaved={createClient}/>}
   </>;
 }
