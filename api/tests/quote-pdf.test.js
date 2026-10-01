@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createQuotePdf, quotePdfFileName } from '../../src/services/pdfService.js';
-import { quoteTotals } from '../../src/utils/quoteUtils.js';
+import { formatQuantity, quoteTotals } from '../../src/utils/quoteUtils.js';
 import { Quote } from '../_lib/models.js';
 import { deflateSync } from 'node:zlib';
 
@@ -63,9 +63,16 @@ test('quote totals include sewing labor without changing material subtotal', () 
   assert.equal(totals.total, 13050);
 });
 
+test('fabric quantities format common fractions and measurement units', () => {
+  assert.equal(formatQuantity(1.5), '1 1/2 yardas');
+  assert.equal(formatQuantity(0.75, 'metros'), '3/4 metros');
+  assert.equal(formatQuantity(1.37, 'pulgadas'), '1.37 pulgadas');
+});
+
 test('quote schema accepts optional reference and material photos without requiring them', () => {
   const document = new Quote({ ...quote, clientId: '507f1f77bcf86cd799439011' });
   assert.equal(document.validateSync(), undefined);
+  assert.equal(document.items[1].unit, 'yardas');
 });
 
 test('quote schema limits material detail images to two', () => {

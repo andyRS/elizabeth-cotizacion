@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { dataStore } from './dataStore.js';
-import { formatDate, formatMoney, quoteTotals } from '../utils/quoteUtils.js';
+import { formatDate, formatMoney, formatQuantity, quoteTotals } from '../utils/quoteUtils.js';
 
 const GREEN = [22, 112, 58];
 const DARK_GREEN = [16, 83, 47];
@@ -121,7 +121,7 @@ export async function createQuotePdf(quote, client, settingsOverride) {
       const base = Number(item.quantity) * Number(item.price);
       const discount = base * Number(item.discount || 0) / 100;
       const tax = (base - discount) * Number(item.tax || 0) / 100;
-      return [item.quantity, item.description, formatMoney(item.price, quote.currency), formatMoney(base - discount + tax, quote.currency)];
+      return [formatQuantity(item.quantity, item.unit || 'yardas'), item.description, formatMoney(item.price, quote.currency), formatMoney(base - discount + tax, quote.currency)];
     }),
     theme: 'grid',
     headStyles: { fillColor: GREEN, textColor: 255, font: 'helvetica', fontStyle: 'bold', fontSize: 8, cellPadding: 3.2 },

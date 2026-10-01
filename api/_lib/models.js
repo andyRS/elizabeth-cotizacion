@@ -18,6 +18,7 @@ const itemSchema = new Schema({
   id: { type: String, required: true, maxlength: 100 },
   description: { type: String, required: true, trim: true, maxlength: 500 },
   quantity: { type: Number, required: true, min: 0.01 },
+  unit: { type: String, enum: ['yardas', 'metros', 'pulgadas', 'centimetros', 'unidades'], default: 'yardas' },
   price: { type: Number, required: true, min: 0 },
   discount: { type: Number, min: 0, max: 100, default: 0 },
   tax: { type: Number, min: 0, max: 100, default: 0 },

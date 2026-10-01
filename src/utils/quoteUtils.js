@@ -7,6 +7,31 @@ export const CURRENCY_INFO = {
   USD: { locale: 'en-US', name: 'Dólar estadounidense', rate: 60 },
 };
 
+export const MEASUREMENT_UNITS = [
+  { value: 'yardas', label: 'Yardas' },
+  { value: 'metros', label: 'Metros' },
+  { value: 'pulgadas', label: 'Pulgadas' },
+  { value: 'centimetros', label: 'Centímetros' },
+  { value: 'unidades', label: 'Unidades' },
+];
+
+export function formatQuantity(quantity, unit = 'yardas') {
+  const value = Number(quantity);
+  if (!Number.isFinite(value)) return `${quantity} ${unit}`;
+
+  const whole = Math.floor(value);
+  const decimal = value - whole;
+  const fractions = [
+    [1, 2], [1, 3], [2, 3], [1, 4], [3, 4], [1, 8], [3, 8], [5, 8], [7, 8],
+  ];
+  const fraction = fractions.find(([numerator, denominator]) => Math.abs(decimal - numerator / denominator) < 0.004);
+  const amount = fraction
+    ? `${whole ? `${whole} ` : ''}${fraction[0]}/${fraction[1]}`
+    : new Intl.NumberFormat('es-DO', { maximumFractionDigits: 2 }).format(value);
+
+  return `${amount} ${unit}`;
+}
+
 export function formatMoney(amount, currency = 'DOP') {
   const value = Number(amount) || 0;
   const formatted = new Intl.NumberFormat(currency === 'DOP' ? 'es-DO' : 'en-US', {
