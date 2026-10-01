@@ -25,7 +25,7 @@ export default function QuoteWizardModal({
   error,
   isEditing,
   onClose,
-  onCreateClient,
+  onSaveClient,
   onUpdate,
   onUpdateItem,
   onAddLine,
@@ -36,6 +36,10 @@ export default function QuoteWizardModal({
   const [step, setStep] = useState(0);
   const [stepError, setStepError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [addingClient, setAddingClient] = useState(false);
+  const [clientSaving, setClientSaving] = useState(false);
+  const [clientError, setClientError] = useState('');
+  const [clientDraft, setClientDraft] = useState({ name: '', businessName: '', phone: '', email: '', taxId: '' });
   const dialogRef = useRef(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
@@ -113,6 +117,25 @@ export default function QuoteWizardModal({
     }
   };
 
+  const saveClient = async (event) => {
+    event.preventDefault();
+    setClientError('');
+    if (!clientDraft.name.trim()) {
+      setClientError('Escribe el nombre del cliente para guardarlo.');
+      return;
+    }
+    setClientSaving(true);
+    try {
+      await onSaveClient({ ...clientDraft, name: clientDraft.name.trim() });
+      setClientDraft({ name: '', businessName: '', phone: '', email: '', taxId: '' });
+      setAddingClient(false);
+    } catch (exception) {
+      setClientError(exception.message || 'No se pudo guardar el cliente.');
+    } finally {
+      setClientSaving(false);
+    }
+  };
+
   const content = <div className="quote-wizard-backdrop">
     <section className="quote-wizard-modal" role="dialog" aria-modal="true" aria-labelledby="quote-wizard-title" ref={dialogRef} tabIndex={-1}>
       <header className="quote-wizard-header">
@@ -132,15 +155,25 @@ export default function QuoteWizardModal({
       <main className="quote-wizard-content" key={step}>
         {step === 0 && <section className="quote-wizard-panel" aria-labelledby="quote-step-one-title">
           <div className="quote-wizard-panel-heading"><span>EMPECEMOS</span><h2 id="quote-step-one-title">¿A quién le vas a cotizar?</h2><p>Elige el cliente y confirma la fecha de esta propuesta.</p></div>
-          <div className="quote-wizard-client-row">
+          {addingClient ? <form className="quote-wizard-new-client" onSubmit={saveClient}>
+            <div className="quote-wizard-new-client-heading"><strong>Nuevo cliente</strong><button type="button" className="text-link" onClick={() => { setAddingClient(false); setClientError(''); }}>Elegir un cliente guardado</button></div>
+            <div className="quote-wizard-new-client-fields">
+              <Field label="Nombre del cliente *"><input autoFocus value={clientDraft.name} onChange={(event) => setClientDraft((current) => ({ ...current, name: event.target.value }))} placeholder="Nombre y apellido" required/></Field>
+              <Field label="Empresa (opcional)"><input value={clientDraft.businessName} onChange={(event) => setClientDraft((current) => ({ ...current, businessName: event.target.value }))} placeholder="Nombre comercial"/></Field>
+              <Field label="Teléfono (opcional)"><input type="tel" inputMode="tel" value={clientDraft.phone} onChange={(event) => setClientDraft((current) => ({ ...current, phone: event.target.value }))} placeholder="809 555 0000"/></Field>
+              <Field label="Correo (opcional)"><input type="email" inputMode="email" value={clientDraft.email} onChange={(event) => setClientDraft((current) => ({ ...current, email: event.target.value }))} placeholder="cliente@correo.com"/></Field>
+            </div>
+            {clientError && <p className="quote-wizard-error" role="alert">{clientError}</p>}
+            <Button type="submit" disabled={clientSaving}>{clientSaving ? 'Guardando cliente…' : 'Guardar y seleccionar cliente'} <Check size={15}/></Button>
+          </form> : <div className="quote-wizard-client-row">
             <Field label="Cliente">
               <Select value={form.clientId} onChange={(event) => onUpdate('clientId', event.target.value)} aria-label="Seleccionar cliente">
                 <option value="">Selecciona un cliente</option>
                 {clients.map((client) => <option key={client.id} value={client.id}>{client.businessName ? `${client.businessName} · ${client.name}` : client.name}</option>)}
               </Select>
             </Field>
-            <Button type="button" variant="outline" onClick={onCreateClient}><CirclePlus size={16}/> Agregar cliente</Button>
-          </div>
+            <Button type="button" variant="outline" onClick={() => setAddingClient(true)}><CirclePlus size={16}/> Agregar cliente</Button>
+          </div>}
           {selectedClient && <div className="quote-wizard-selected-client"><span>{(selectedClient.businessName || selectedClient.name).slice(0, 1).toUpperCase()}</span><div><strong>{selectedClient.businessName || selectedClient.name}</strong><small>{selectedClient.phone || selectedClient.email || 'Cliente seleccionado'}</small></div><Check size={17}/></div>}
           <div className="quote-wizard-fields quote-wizard-date-fields">
             <Field label="Fecha de emisión"><input type="date" value={form.date} onChange={(event) => { const nextDate = event.target.value; onUpdate('date', nextDate); if (validityChoice !== 'custom') onUpdate('validUntil', addDays(nextDate, Number(validityChoice))); }} required/></Field>
@@ -157,11 +190,11 @@ export default function QuoteWizardModal({
               <div className="quote-wizard-material-heading"><strong>Tela o material {index + 1}</strong><button className="icon-button icon-danger" type="button" onClick={() => onRemoveLine(item.id)} aria-label={`Quitar material ${index + 1}`}><Trash2 size={15}/></button></div>
               <div className="quote-wizard-material-fields">
                 <Field label="Nombre de la tela"><input placeholder="Ej. Lycra Everlast" value={item.description} onChange={(event) => onUpdateItem(item.id, 'description', event.target.value)} aria-label={`Nombre del material ${index + 1}`} required/></Field>
-                <Field label="Cantidad"><input type="number" min="0.01" step="0.01" value={item.quantity} onChange={(event) => onUpdateItem(item.id, 'quantity', event.target.value)} aria-label={`Cantidad del material ${index + 1}`} required/></Field>
+                <Field label="Cantidad"><input type="number" min="0.01" step="0.01" inputMode="decimal" enterKeyHint="done" value={Number(item.quantity) > 0 ? item.quantity : ''} placeholder="1" onFocus={(event) => event.currentTarget.select()} onChange={(event) => onUpdateItem(item.id, 'quantity', event.target.value)} aria-label={`Cantidad del material ${index + 1}`} required/></Field>
                 <Field label="Unidad de medida"><Select value={item.unit || 'yardas'} onChange={(event) => onUpdateItem(item.id, 'unit', event.target.value)} aria-label={`Unidad del material ${index + 1}`}>{MEASUREMENT_UNITS.map((unit) => <option key={unit.value} value={unit.value}>{unit.label}</option>)}</Select></Field>
-                <Field label={`Precio por ${selectedUnit(item.unit).label.toLowerCase()}`}><input type="number" min="0" step="0.01" value={item.price} onChange={(event) => onUpdateItem(item.id, 'price', event.target.value)} aria-label={`Precio por unidad del material ${index + 1}`} required/></Field>
+                <Field label={`Precio por ${selectedUnit(item.unit).label.toLowerCase()}`}><input type="number" min="0" step="0.01" inputMode="decimal" value={item.price} onChange={(event) => onUpdateItem(item.id, 'price', event.target.value)} aria-label={`Precio por unidad del material ${index + 1}`} required/></Field>
+                <Field label="Descuento % (opcional)" hint="Solo se aplica a esta tela."><input type="number" min="0" max="100" step="0.01" inputMode="decimal" placeholder="0" value={item.discount} onChange={(event) => onUpdateItem(item.id, 'discount', event.target.value)} aria-label={`Descuento opcional del material ${index + 1}`}/></Field>
               </div>
-              <details className="quote-wizard-item-options"><summary>Agregar descuento (opcional)</summary><div className="quote-wizard-fields quote-wizard-discount"><Field label="Descuento %"><input type="number" min="0" max="100" step="0.01" value={item.discount} onChange={(event) => onUpdateItem(item.id, 'discount', event.target.value)} aria-label={`Descuento del material ${index + 1}`}/></Field></div></details>
               <div className="quote-wizard-line-total"><span>{formatQuantity(item.quantity, item.unit || 'yardas')}</span><strong>{formatMoney(lineTotal(item), form.currency)}</strong></div>
             </article>)}
           </div>

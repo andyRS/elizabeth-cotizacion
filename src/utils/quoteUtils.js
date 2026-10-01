@@ -29,7 +29,9 @@ export function formatQuantity(quantity, unit = 'yardas') {
     ? `${whole ? `${whole} ` : ''}${fraction[0]}/${fraction[1]}`
     : new Intl.NumberFormat('es-DO', { maximumFractionDigits: 2 }).format(value);
 
-  return `${amount} ${unit}`;
+  const singularUnits = { yardas: 'yarda', metros: 'metro', pulgadas: 'pulgada', centimetros: 'centímetro', unidades: 'unidad' };
+  const displayUnit = value === 1 ? singularUnits[unit] || unit : unit;
+  return `${amount} ${displayUnit}`;
 }
 
 export function formatMoney(amount, currency = 'DOP') {

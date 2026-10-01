@@ -48,6 +48,8 @@ test('EATELIERM PDF uses its branded quotation filename and produces one A4 page
   assert.equal(pdf.getNumberOfPages(), 1);
   assert.ok(pdf.output('arraybuffer').byteLength > 3000);
   assert.doesNotMatch(pdf.output(), /Impuestos/);
+  assert.match(pdf.output(), /EatelierM/);
+  assert.doesNotMatch(pdf.output(), /Gracias por confiar/);
 });
 
 test('EATELIERM PDF embeds optional garment and fabric reference images', async () => {
@@ -70,6 +72,7 @@ test('legacy item taxes are ignored in quotation totals', () => {
 });
 
 test('fabric quantities format common fractions and measurement units', () => {
+  assert.equal(formatQuantity(1), '1 yarda');
   assert.equal(formatQuantity(1.5), '1 1/2 yardas');
   assert.equal(formatQuantity(0.75, 'metros'), '3/4 metros');
   assert.equal(formatQuantity(1.37, 'pulgadas'), '1.37 pulgadas');

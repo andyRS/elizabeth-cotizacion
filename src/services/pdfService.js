@@ -37,10 +37,10 @@ function outlinedBox(doc, x, y, width, height, radius = 3) {
   doc.roundedRect(x, y, width, height, radius, radius, 'S');
 }
 
-async function createScriptWordmark(text) {
+async function createBrandWordmark(text) {
   if (typeof document === 'undefined') return null;
   try {
-    await document.fonts.load('700 190px "Dancing Script"');
+    await document.fonts.load('700 156px "Manrope"');
     const canvas = document.createElement('canvas');
     canvas.width = 1150;
     canvas.height = 260;
@@ -50,7 +50,7 @@ async function createScriptWordmark(text) {
     context.fillStyle = `rgb(${GREEN.join(',')})`;
     context.textAlign = 'left';
     context.textBaseline = 'middle';
-    context.font = '700 190px "Dancing Script"';
+    context.font = '700 156px "Manrope"';
     context.fillText(text, 8, 132, canvas.width - 16);
     return canvas.toDataURL('image/png');
   } catch {
@@ -60,12 +60,12 @@ async function createScriptWordmark(text) {
 
 async function printHeader(doc, quote, client, settings) {
   const pageWidth = doc.internal.pageSize.getWidth();
-  const wordmark = await createScriptWordmark('EATELIERM');
+  const wordmark = await createBrandWordmark('EatelierM');
   if (!addCoverImage(doc, wordmark, 16, 7, 83, 25)) {
     doc.setTextColor(...GREEN);
-    doc.setFont('times', 'italic');
-    doc.setFontSize(27);
-    doc.text('EATELIERM', 16, 24);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(23);
+    doc.text('EatelierM', 16, 24);
   }
   doc.setTextColor(...DARK_GREEN);
   doc.setFont('helvetica', 'bold');
@@ -116,7 +116,7 @@ export async function createQuotePdf(quote, client, settingsOverride) {
 
   autoTable(doc, {
     startY: 53,
-    head: [['Cantidad', 'Descripción', 'Precio unitario', 'Precio material']],
+    head: [['Cantidad', 'Materiales', 'Precio unitario', 'Precio material']],
     body: quote.items.map((item) => {
       const base = Number(item.quantity) * Number(item.price);
       const discount = base * Number(item.discount || 0) / 100;
@@ -154,9 +154,9 @@ export async function createQuotePdf(quote, client, settingsOverride) {
   });
 
   const hasPhotos = Boolean(quote.garmentImage || quote.detailImages?.length);
-  const photoSectionHeight = hasPhotos ? 102 : 66;
-  let photoY = Math.max(doc.lastAutoTable.finalY + 6, 127);
-  if (photoY + photoSectionHeight > pageHeight - 13) {
+  const photoSectionHeight = hasPhotos ? 72 : 0;
+  let photoY = doc.lastAutoTable.finalY + 8;
+  if (hasPhotos && photoY + photoSectionHeight > pageHeight - 13) {
     doc.addPage();
     photoY = 17;
   }
@@ -180,43 +180,19 @@ export async function createQuotePdf(quote, client, settingsOverride) {
     doc.setTextColor(...GREEN);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
-    doc.text('MATERIALES / DETALLES', leftX + 1, photoY + 77);
-    const detailY = photoY + 80;
-    const detailWidth = (leftWidth - 3) / 2;
+    doc.text('MATERIALES / DETALLES', rightX + 1, photoY);
+    const detailY = photoY + 3;
+    const detailWidth = (rightWidth - 3) / 2;
     [0, 1].forEach((index) => {
-      const x = leftX + index * (detailWidth + 3);
-      outlinedBox(doc, x, detailY, detailWidth, 20, 2);
-      if (quote.detailImages?.[index]) addCoverImage(doc, quote.detailImages[index], x + 1.5, detailY + 1.5, detailWidth - 3, 17);
+      const x = rightX + index * (detailWidth + 3);
+      if (quote.detailImages?.[index]) {
+        outlinedBox(doc, x, detailY, detailWidth, 64, 2);
+        addCoverImage(doc, quote.detailImages[index], x + 1.5, detailY + 1.5, detailWidth - 3, 61);
+      }
     });
-    outlinedBox(doc, rightX, photoY + 3, rightWidth, 97, 2.5);
-    doc.setTextColor(...DARK_GREEN);
-    doc.setFont('times', 'italic');
-    doc.setFontSize(22);
-    doc.text('¡Gracias por', rightX + rightWidth / 2, photoY + 42, { align: 'center' });
-    doc.text('confiar en', rightX + rightWidth / 2, photoY + 53, { align: 'center' });
-    doc.setFontSize(27);
-    doc.text('EATELIERM!', rightX + rightWidth / 2, photoY + 67, { align: 'center' });
-    doc.setDrawColor(...GREEN);
-    doc.setLineWidth(0.8);
-    doc.line(rightX + 19, photoY + 72, rightX + rightWidth - 19, photoY + 72);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.5);
-    doc.setTextColor(...MUTED);
-    doc.text(settings.businessName || 'Elizabeth Méndez', rightX + rightWidth / 2, photoY + 83, { align: 'center' });
-    doc.text('Costura y confección a tu medida', rightX + rightWidth / 2, photoY + 88, { align: 'center' });
-  } else {
-    outlinedBox(doc, 15, photoY, pageWidth - 30, 44, 2.5);
-    doc.setTextColor(...DARK_GREEN);
-    doc.setFont('times', 'italic');
-    doc.setFontSize(19);
-    doc.text('¡Gracias por confiar en EATELIERM!', pageWidth / 2, photoY + 20, { align: 'center' });
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(...MUTED);
-    doc.text(settings.businessName || 'Elizabeth Méndez', pageWidth / 2, photoY + 30, { align: 'center' });
   }
 
-  const termsY = photoY + photoSectionHeight + 4;
+  const termsY = (hasPhotos ? photoY + photoSectionHeight : doc.lastAutoTable.finalY + 8) + 4;
   if (quote.notes || quote.terms) {
     if (termsY > pageHeight - 28) doc.addPage();
     let y = termsY > pageHeight - 28 ? 18 : termsY;
