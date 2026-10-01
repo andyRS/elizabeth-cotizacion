@@ -1,40 +1,58 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, CalendarDays, Check, CirclePlus, FileDown, Eye, Plus, ReceiptText, Trash2, UserRoundPlus } from 'lucide-react';
-import { Button, Card, Field, PageHeader, Select } from '../components/ui.jsx';
+import { Button, Card, Field, PageHeader, Select, Spinner } from '../components/ui.jsx';
 import ClientModal from '../components/ClientModal.jsx';
 import { dataStore } from '../services/dataStore.js';
 import { downloadQuotePdf } from '../services/pdfService.js';
 import { addDays, dateOnly, formatMoney, quoteTotals } from '../utils/quoteUtils.js';
+import { DEFAULT_SETTINGS } from '../services/defaults.js';
 
 const newItem=(tax=18)=>({id:globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random()}`,description:'',quantity:1,price:0,discount:0,tax});
 function blankQuote(settings,number){const date=dateOnly();return {number,clientId:'',date,validUntil:addDays(date,settings.defaultValidity||15),currency:settings.defaultCurrency||'DOP',status:'pending',items:[newItem(settings.defaultTax??18)],notes:settings.defaultNotes||'',terms:settings.defaultTerms||''};}
 export default function QuoteForm(){
   const {id}=useParams();const navigate=useNavigate();const {notify}=useOutletContext();const [params]=useSearchParams();
-  const settings=dataStore.settings.get();
-  const original=useMemo(()=>id?dataStore.quotes.get(id):params.get('duplicate')?dataStore.quotes.get(params.get('duplicate')):null,[id,params]);
-  const number=useMemo(()=>original&&!id?dataStore.quotes.nextNumber():original?.number||dataStore.quotes.nextNumber(),[original,id]);
-  const [form,setForm]=useState(()=>{const base=original?{...original,id:id||undefined,number:id?original.number:number,status:id?original.status:'draft',items:original.items.map((item)=>({...item,id:globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random()}`}))}:blankQuote(settings,number);return base;});
-  const [clients,setClients]=useState(()=>dataStore.clients.list());const [showClient,setShowClient]=useState(false);const [error,setError]=useState('');
-  const totals=quoteTotals(form.items);const selectedClient=clients.find((client)=>client.id===form.clientId);
+  const duplicateId=params.get('duplicate');
+  const [settings,setSettings]=useState(DEFAULT_SETTINGS);const [form,setForm]=useState(null);const [clients,setClients]=useState([]);const [loading,setLoading]=useState(true);const [showClient,setShowClient]=useState(false);const [error,setError]=useState('');
+  useEffect(()=>{
+    let active=true;
+    Promise.all([dataStore.settings.get(),dataStore.clients.list(),id?dataStore.quotes.get(id):duplicateId?dataStore.quotes.get(duplicateId):Promise.resolve(null)])
+      .then(async([savedSettings,clientRecords,original])=>{
+        if(!active)return;
+        const quoteNumber=id&&original?original.number:await dataStore.quotes.nextNumber();
+        const base=original?{...original,id:id||undefined,number:quoteNumber,status:id?original.status:'draft',items:original.items.map((item)=>({...item,id:globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random()}`}))}:blankQuote(savedSettings,quoteNumber);
+        setSettings(savedSettings);setClients(clientRecords);setForm(base);
+      })
+      .catch((exception)=>setError(exception.message))
+      .finally(()=>{if(active)setLoading(false);});
+    return()=>{active=false;};
+  },[id,duplicateId]);
+  const totals=form?quoteTotals(form.items):quoteTotals([]);const selectedClient=form&&clients.find((client)=>client.id===form.clientId);
   const update=(key,value)=>setForm((current)=>({...current,[key]:value}));
   const updateItem=(id,key,value)=>setForm((current)=>({...current,items:current.items.map((item)=>item.id===id?{...item,[key]:value}:item)}));
   const addLine=()=>update('items',[...form.items,newItem(settings.defaultTax??18)]);
   const removeLine=(lineId)=>update('items',form.items.length===1?form.items:form.items.filter((item)=>item.id!==lineId));
-  const save=(status=form.status)=>{
+  const save=async(status=form?.status)=>{
     setError('');
-    if(!form.clientId)return setError('Selecciona un cliente para continuar.');
-    if(!form.items.length||form.items.some((item)=>!item.description.trim()||Number(item.quantity)<=0||String(item.price).trim()===''||!Number.isFinite(Number(item.price))||Number(item.price)<0||Number(item.discount)<0||Number(item.discount)>100||Number(item.tax)<0))return setError('Completa la descripción y revisa cantidades, precios, descuentos e impuestos.');
-    if(!form.date||!form.validUntil)return setError('Completa la fecha de emisión y la fecha de validez.');
-    if(dataStore.quotes.list().some((quote)=>quote.number===form.number&&quote.id!==form.id))return setError('Ya existe una cotización con ese número.');
-    const saved=dataStore.quotes.save({...form,status});setForm(saved);notify(id?'Cotización actualizada correctamente.':'Cotización guardada correctamente.');return saved;
+    if(!form.clientId){setError('Selecciona un cliente para continuar.');return null;}
+    if(!form.items.length||form.items.some((item)=>!item.description.trim()||Number(item.quantity)<=0||String(item.price).trim()===''||!Number.isFinite(Number(item.price))||Number(item.price)<0||Number(item.discount)<0||Number(item.discount)>100||Number(item.tax)<0)){setError('Completa la descripción y revisa cantidades, precios, descuentos e impuestos.');return null;}
+    if(!form.date||!form.validUntil){setError('Completa la fecha de emisión y la fecha de validez.');return null;}
+    if(!id){
+      try{if((await dataStore.quotes.list()).some((quote)=>quote.number===form.number)){setError('Ya existe una cotización con ese número.');return null;}}
+      catch(exception){setError(exception.message);return null;}
+    }
+    try { const saved=await dataStore.quotes.save({...form,status});setForm(saved);notify(id?'Cotización actualizada correctamente.':'Cotización guardada correctamente.');return saved; }
+    catch(exception){setError(exception.message);return null;}
   };
-  const saveThenPreview=(status=form.status)=>{const saved=save(status);if(saved?.id)navigate(`/cotizaciones/${saved.id}`);};
-  const saveThenPdf=()=>{const saved=save(form.status);if(saved?.id)downloadQuotePdf(saved,selectedClient);};
-  const createClient=(client)=>{setClients(dataStore.clients.list());update('clientId',client.id);notify('Cliente creado correctamente.');};
+  const saveThenPreview=async(status=form?.status)=>{const saved=await save(status);if(saved?.id)navigate(`/cotizaciones/${saved.id}`);};
+  const saveThenPdf=async()=>{const saved=await save(form.status);if(saved?.id)downloadQuotePdf(saved,selectedClient);};
+  const createClient=(client)=>{setClients((records)=>[client,...records.filter((record)=>record.id!==client.id)]);update('clientId',client.id);notify('Cliente creado correctamente.');};
+  if(loading)return <Spinner label="Cargando datos para la cotización…"/>;
+  if(error&&!form)return <Card className="form-section"><h2>No se pudo abrir el formulario</h2><p>{error}</p><Button onClick={()=>window.location.reload()}>Intentar nuevamente</Button></Card>;
+  if(!form)return null;
   const validityChoice=['7','15','30'].includes(String(Math.round((new Date(`${form.validUntil}T12:00:00`)-new Date(`${form.date}T12:00:00`))/86400000)))?String(Math.round((new Date(`${form.validUntil}T12:00:00`)-new Date(`${form.date}T12:00:00`))/86400000)):'custom';
   return <><div className="form-back-link"><Link to="/cotizaciones"><ArrowLeft size={16}/> Volver a cotizaciones</Link></div><PageHeader eyebrow={id?'EDITAR COTIZACIÓN':'NUEVA COTIZACIÓN'} title={id?'Editar cotización':'Nueva cotización'} description="Detalla la confección, el arreglo o la prenda a medida para tu cliente." action={<span className="quote-number-chip"><ReceiptText size={16}/>{form.number}</span>}/>
-    <form className="quote-form" onSubmit={(e)=>{e.preventDefault();save('pending');}}>
+    <form className="quote-form" onSubmit={(e)=>{e.preventDefault();void save('pending');}}>
       <Card className="form-section"><div className="form-section-title"><span className="section-icon"><UserRoundPlus size={18}/></span><div><h2>Cliente</h2><p>¿Para quién estás preparando esta propuesta?</p></div></div><div className="client-pick-row"><Field label="Selecciona un cliente" className="client-picker-field"><Select value={form.clientId} onChange={(e)=>update('clientId',e.target.value)}><option value="">Elige un cliente...</option>{clients.map((client)=><option key={client.id} value={client.id}>{client.businessName?`${client.businessName} · ${client.name}`:client.name}</option>)}</Select></Field><Button type="button" variant="outline" onClick={()=>setShowClient(true)}><Plus size={16}/> Nuevo cliente</Button></div>{selectedClient&&<div className="selected-client"><div className="selected-avatar">{(selectedClient.businessName||selectedClient.name).slice(0,1).toUpperCase()}</div><div className="selected-client-details"><strong>{selectedClient.name}</strong>{selectedClient.businessName&&<span>{selectedClient.businessName}</span>}<div><span>{selectedClient.taxId||'Sin RNC/Cédula'}</span>{selectedClient.phone&&<span>{selectedClient.phone}</span>}{selectedClient.email&&<span>{selectedClient.email}</span>}{selectedClient.address&&<span>{selectedClient.address}</span>}</div></div></div>}</Card>
       <Card className="form-section"><div className="form-section-title"><span className="section-icon"><CalendarDays size={18}/></span><div><h2>Datos de la cotización</h2><p>Define el período de validez y la moneda de tu propuesta.</p></div></div><div className="quote-meta-grid"><Field label="Número"><input value={form.number} onChange={(e)=>update('number',e.target.value)} required/></Field><Field label="Fecha de emisión"><input type="date" value={form.date} onChange={(e)=>update('date',e.target.value)} required/></Field><Field label="Válida por"><Select value={validityChoice} onChange={(e)=>{if(e.target.value!=='custom')update('validUntil',addDays(form.date,Number(e.target.value)));}}><option value="7">7 días</option><option value="15">15 días</option><option value="30">30 días</option><option value="custom">Personalizado</option></Select></Field><Field label="Fecha de vencimiento"><input type="date" value={form.validUntil} min={form.date} onChange={(e)=>update('validUntil',e.target.value)} required/></Field><Field label="Moneda"><Select value={form.currency} onChange={(e)=>update('currency',e.target.value)}><option value="DOP">DOP — Peso dominicano</option><option value="USD">USD — Dólar estadounidense</option></Select></Field><Field label="Estado"><Select value={form.status} onChange={(e)=>update('status',e.target.value)}>{[['draft','Borrador'],['pending','Pendiente'],['sent','Enviada'],['approved','Aprobada'],['rejected','Rechazada']].map(([value,label])=><option key={value} value={value}>{label}</option>)}</Select></Field></div></Card>
       <Card className="form-section items-section"><div className="form-section-title items-heading"><span className="section-icon"><ReceiptText size={18}/></span><div><h2>Prendas, confecciones y arreglos</h2><p>Agrega cada trabajo de costura y sus cantidades.</p></div><Button type="button" variant="outline" onClick={addLine}><Plus size={16}/> Agregar línea</Button></div><div className="items-table-wrap"><table className="items-table"><thead><tr><th>DESCRIPCIÓN</th><th>CANTIDAD</th><th>PRECIO</th><th>DESC. %</th><th>IMPUESTO %</th><th className="align-right">TOTAL</th><th></th></tr></thead><tbody>{form.items.map((item)=>{const base=Number(item.quantity||0)*Number(item.price||0);const lineTotal=base-base*Number(item.discount||0)/100+(base-base*Number(item.discount||0)/100)*Number(item.tax||0)/100;return <tr key={item.id}><td><input className="item-description" placeholder="Ej. confección, arreglo o prenda a medida" value={item.description} onChange={(e)=>updateItem(item.id,'description',e.target.value)} aria-label="Descripción" required/></td><td><input type="number" min="0.01" step="0.01" value={item.quantity} onChange={(e)=>updateItem(item.id,'quantity',e.target.value)} aria-label="Cantidad" required/></td><td><input type="number" min="0" step="0.01" value={item.price} onChange={(e)=>updateItem(item.id,'price',e.target.value)} aria-label="Precio" required/></td><td><input type="number" min="0" max="100" step="0.01" value={item.discount} onChange={(e)=>updateItem(item.id,'discount',e.target.value)} aria-label="Descuento porcentual"/></td><td><input type="number" min="0" step="0.01" value={item.tax} onChange={(e)=>updateItem(item.id,'tax',e.target.value)} aria-label="Impuesto porcentual"/></td><td className="align-right line-total">{formatMoney(lineTotal,form.currency)}</td><td><button className="icon-button icon-danger" type="button" onClick={()=>removeLine(item.id)} aria-label="Eliminar línea" disabled={form.items.length===1}><Trash2 size={15}/></button></td></tr>;})}</tbody></table></div><button type="button" className="add-line-link" onClick={addLine}><CirclePlus size={16}/> Añadir otro trabajo</button><div className="totals-layout"><div className="tax-note"><span className="tax-note-dot"/>Los impuestos se calculan por línea después del descuento. Puedes indicar 0% si el trabajo está exento.</div><div className="totals-card"><div><span>Subtotal</span><strong>{formatMoney(totals.subtotal,form.currency)}</strong></div><div><span>Descuento</span><strong className="discount-value">− {formatMoney(totals.discount,form.currency)}</strong></div><div><span>Impuestos</span><strong>{formatMoney(totals.tax,form.currency)}</strong></div><div className="grand-total"><span>Total</span><strong>{formatMoney(totals.total,form.currency)}</strong></div></div></div></Card>

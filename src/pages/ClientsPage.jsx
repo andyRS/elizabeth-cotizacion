@@ -1,21 +1,26 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import { Building2, FileText, Mail, MapPin, Pencil, Phone, Plus, Trash2, Users } from 'lucide-react';
-import { Button, Card, ConfirmDialog, EmptyState, Field, PageHeader, SearchInput } from '../components/ui.jsx';
+import { Button, Card, ConfirmDialog, EmptyState, Field, PageHeader, SearchInput, Spinner } from '../components/ui.jsx';
 import { dataStore } from '../services/dataStore.js';
 import { CURRENCY_INFO, formatDate, formatMoney, quoteTotals } from '../utils/quoteUtils.js';
 
 export default function ClientsPage() {
-  const [clients, setClients] = useState(()=>dataStore.clients.list());
-  const [quotes,setQuotes]=useState(()=>dataStore.quotes.list());
+  const [clients, setClients] = useState([]);
+  const [quotes,setQuotes]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [loadError,setLoadError]=useState('');
   const [search,setSearch]=useState('');
   const [modal,setModal]=useState(null);
   const [deleting,setDeleting]=useState(null);
   const {notify}=useOutletContext();
-  const refresh=()=>{setClients(dataStore.clients.list());setQuotes(dataStore.quotes.list());};
+  useEffect(()=>{Promise.all([dataStore.clients.list(),dataStore.quotes.list()]).then(([clientRecords,quoteRecords])=>{setClients(clientRecords);setQuotes(quoteRecords);}).catch((error)=>setLoadError(error.message)).finally(()=>setLoading(false));},[]);
+  const refresh=async()=>{const [clientRecords,quoteRecords]=await Promise.all([dataStore.clients.list(),dataStore.quotes.list()]);setClients(clientRecords);setQuotes(quoteRecords);};
   const visible=useMemo(()=>clients.filter((client)=>`${client.name} ${client.businessName} ${client.email} ${client.taxId}`.toLocaleLowerCase().includes(search.toLocaleLowerCase())),[clients,search]);
-  const save=(client)=>{dataStore.clients.save(client);setModal(null);refresh();notify(client.id?'Cliente actualizado correctamente.':'Cliente creado correctamente.');};
-  const remove=()=>{try{dataStore.clients.remove(deleting.id);setDeleting(null);refresh();notify('Cliente eliminado.');}catch(error){setDeleting(null);notify(error.message,'error');}};
+  const save=async(client)=>{const isUpdate=Boolean(client.id);try{await dataStore.clients.save(client);setModal(null);await refresh();notify(isUpdate?'Cliente actualizado correctamente.':'Cliente creado correctamente.');}catch(error){notify(error.message,'error');}};
+  const remove=async()=>{try{await dataStore.clients.remove(deleting.id);setDeleting(null);await refresh();notify('Cliente eliminado.');}catch(error){setDeleting(null);notify(error.message,'error');}};
+  if(loading)return <Spinner label="Cargando clientes…"/>;
+  if(loadError)return <Card className="form-section"><h2>No se pudo cargar el directorio</h2><p>{loadError}</p><Button onClick={()=>window.location.reload()}>Intentar nuevamente</Button></Card>;
   return <><PageHeader eyebrow="RELACIONES" title="Clientes" description="Tu directorio comercial, siempre listo para una nueva propuesta." action={<Button onClick={()=>setModal({})}><Plus size={17}/> Nuevo cliente</Button>}/>
     <div className="client-summary"><Card><div className="summary-glyph"><Users size={19}/></div><span>CLIENTES REGISTRADOS</span><strong>{clients.length}</strong></Card><Card><div className="summary-glyph summary-glyph-sand"><FileText size={19}/></div><span>COTIZACIONES EMITIDAS</span><strong>{quotes.length}</strong></Card><Card><div className="summary-glyph summary-glyph-green"><Building2 size={19}/></div><span>CLIENTES CON ACTIVIDAD</span><strong>{new Set(quotes.map((quote)=>quote.clientId)).size}</strong></Card></div>
     <Card className="clients-panel"><div className="panel-toolbar"><div><h2>Directorio de clientes</h2><p>Información e historial de cada relación comercial</p></div><SearchInput value={search} onChange={setSearch} placeholder="Buscar clientes..."/></div>{visible.length?<div className="clients-grid">{visible.map((client)=>{const related=quotes.filter((quote)=>quote.clientId===client.id);const total=related.reduce((sum,quote)=>sum+quoteTotals(quote.items).total*(CURRENCY_INFO[quote.currency]?.rate||1),0);const last=[...related].sort((a,b)=>b.date.localeCompare(a.date))[0];return <article className="client-card" key={client.id}><div className="client-card-head"><div className="client-avatar">{(client.businessName||client.name).slice(0,1).toUpperCase()}</div><div className="client-card-actions"><button className="icon-button" title="Editar cliente" onClick={()=>setModal(client)}><Pencil size={15}/></button><button className="icon-button icon-danger" title="Eliminar cliente" onClick={()=>setDeleting(client)}><Trash2 size={15}/></button></div></div><h3>{client.businessName||client.name}</h3><p className="client-person">{client.businessName?client.name:''}</p><div className="client-contact"><span><Mail size={14}/>{client.email||'Sin correo registrado'}</span><span><Phone size={14}/>{client.phone||'Sin teléfono'}</span>{client.city&&<span><MapPin size={14}/>{client.city}</span>}</div><div className="client-card-stats"><div><small>COTIZADO</small><strong>{formatMoney(total,'DOP')}</strong></div><div><small>COTIZACIONES</small><strong>{related.length}</strong></div></div><div className="client-card-foot"><span>Última cotización <b>{last?formatDate(last.date):'—'}</b></span><Link to={`/cotizaciones?cliente=${client.id}`} title="Ver cotizaciones del cliente">Ver historial <FileText size={14}/></Link></div></article>;})}</div>:<EmptyState icon={Users} title={clients.length?'No hay coincidencias':'Aún no hay clientes'} description={clients.length?'Prueba con otro nombre o correo.':'Registra un cliente y tendrás sus datos listos al preparar cotizaciones.'} action={<Button onClick={()=>setModal({})}><Plus size={16}/> Agregar cliente</Button>}/>}</Card>
@@ -27,6 +32,6 @@ function ClientEditor({client,onClose,onSave}){
   const [form,setForm]=useState(()=>client||{name:'',businessName:'',taxId:'',phone:'',whatsapp:'',email:'',address:'',city:'',notes:''});
   const [error,setError]=useState('');
   const update=(key,value)=>setForm((current)=>({...current,[key]:value}));
-  const submit=(event)=>{event.preventDefault();if(!form.name.trim())return setError('El nombre del cliente es obligatorio.');onSave(form);};
+  const submit=async(event)=>{event.preventDefault();if(!form.name.trim())return setError('El nombre del cliente es obligatorio.');await onSave(form);};
   return <div className="dialog-backdrop" onMouseDown={(e)=>e.target===e.currentTarget&&onClose()}><form className="modal-card" onSubmit={submit}><div className="modal-heading"><div><div className="eyebrow">DIRECTORIO</div><h2>{client?'Editar cliente':'Nuevo cliente'}</h2></div><button className="icon-button" type="button" onClick={onClose} aria-label="Cerrar">×</button></div><div className="form-grid"><Field label="Nombre / razón social *"><input required autoFocus value={form.name} onChange={(e)=>update('name',e.target.value)}/></Field><Field label="Nombre comercial"><input value={form.businessName} onChange={(e)=>update('businessName',e.target.value)}/></Field><Field label="RNC / Cédula"><input value={form.taxId} onChange={(e)=>update('taxId',e.target.value)}/></Field><Field label="Teléfono"><input value={form.phone} onChange={(e)=>update('phone',e.target.value)}/></Field><Field label="WhatsApp"><input value={form.whatsapp} onChange={(e)=>update('whatsapp',e.target.value)}/></Field><Field label="Correo electrónico"><input type="email" value={form.email} onChange={(e)=>update('email',e.target.value)}/></Field><Field label="Dirección"><input value={form.address} onChange={(e)=>update('address',e.target.value)}/></Field><Field label="Ciudad"><input value={form.city} onChange={(e)=>update('city',e.target.value)}/></Field><Field label="Notas" className="field-wide"><textarea rows="2" value={form.notes} onChange={(e)=>update('notes',e.target.value)}/></Field></div>{error&&<p className="inline-error">{error}</p>}<div className="modal-actions"><Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button><Button type="submit">{client?'Guardar cambios':'Guardar cliente'}</Button></div></form></div>;
 }

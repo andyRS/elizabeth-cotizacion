@@ -1,17 +1,26 @@
-const SESSION_KEY = 'em_quotes_authenticated_v1';
-const ADMIN_USERNAME = import.meta.env.VITE_ADMIN_USERNAME || 'administrador';
-const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || '';
-
 export const authService = {
-  isAuthenticated() {
-    return sessionStorage.getItem(SESSION_KEY) === 'true';
+  async isAuthenticated() {
+    const response = await fetch('/api/auth/session', { credentials: 'same-origin' });
+    if (!response.ok) return false;
+    const payload = await response.json();
+    return payload.authenticated === true;
   },
-  login(username, password) {
-    const valid = Boolean(ADMIN_PASSWORD) && username.trim().toLocaleLowerCase() === ADMIN_USERNAME.toLocaleLowerCase() && password === ADMIN_PASSWORD;
-    if (valid) sessionStorage.setItem(SESSION_KEY, 'true');
-    return valid;
+  async login(username, password) {
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const error = new Error(payload.error || 'No se pudo iniciar sesión.');
+      error.status = response.status;
+      throw error;
+    }
+    return payload.authenticated === true;
   },
-  logout() {
-    sessionStorage.removeItem(SESSION_KEY);
+  async logout() {
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
   },
 };

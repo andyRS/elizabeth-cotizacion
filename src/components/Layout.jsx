@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { FileText, LayoutDashboard, LogOut, Menu, Settings, Users, X, Lightbulb, ChevronRight } from 'lucide-react';
 import { Toast } from './ui.jsx';
 import { dataStore } from '../services/dataStore.js';
+import { DEFAULT_SETTINGS } from '../services/defaults.js';
 
 const navigation = [
   { to: '/', label: 'Panel', icon: LayoutDashboard, end: true },
@@ -14,8 +15,9 @@ const navigation = [
 export default function Layout({ onLogout }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [toast, setToast] = useState(null);
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const location = useLocation();
-  const settings = dataStore.settings.get();
+  useEffect(() => { dataStore.settings.get().then(setSettings).catch(() => {}); }, []);
   const heading = navigation.find((item) => item.to === location.pathname)?.label || 'Cotización';
   const notify = (message, type = 'success') => { setToast({ message, type }); window.setTimeout(() => setToast(null), 3400); };
   const outletContext = { notify };

@@ -1,28 +1,43 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Activity, ArrowRight, BadgeCheck, FileText, Plus, Send, Sparkles, Users, Wallet } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { Button, Card, EmptyState, PageHeader, StatusBadge } from '../components/ui.jsx';
+import { Button, Card, EmptyState, PageHeader, Spinner, StatusBadge } from '../components/ui.jsx';
 import StatCard from '../components/StatCard.jsx';
 import { dataStore } from '../services/dataStore.js';
 import { CURRENCY_INFO, formatMoney, quoteTotals, statusForDisplay } from '../utils/quoteUtils.js';
+import { DEFAULT_SETTINGS } from '../services/defaults.js';
 
 const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 export default function Dashboard() {
-  const [currency, setCurrency] = useState(dataStore.settings.get().defaultCurrency || 'DOP');
-  const clients = dataStore.clients.list();
-  const quotes = dataStore.quotes.list().map((quote) => ({ ...quote, status: statusForDisplay(quote) }));
+  const [currency, setCurrency] = useState(DEFAULT_SETTINGS.defaultCurrency);
+  const [clients, setClients] = useState([]);
+  const [quotes, setQuotes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    Promise.all([dataStore.settings.get(), dataStore.clients.list(), dataStore.quotes.list()])
+      .then(([settings, clientRecords, quoteRecords]) => {
+        setCurrency(settings.defaultCurrency || 'DOP');
+        setClients(clientRecords);
+        setQuotes(quoteRecords.map((quote) => ({ ...quote, status: statusForDisplay(quote) })));
+      })
+      .catch((exception) => setError(exception.message))
+      .finally(() => setLoading(false));
+  }, []);
   const rate = (quoteCurrency) => CURRENCY_INFO[quoteCurrency]?.rate || 1;
   const amountInCurrency = (quote) => quoteTotals(quote.items).total * rate(quote.currency) / rate(currency);
-  const stats = useMemo(() => {
-    const total = quotes.reduce((sum, quote) => sum + amountInCurrency(quote), 0);
-    return { total, pending: quotes.filter((quote) => ['pending','sent'].includes(quote.status)).length, approved: quotes.filter((quote) => quote.status === 'approved').length };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [quotes, currency]);
+  const stats = {
+    total: quotes.reduce((sum, quote) => sum + amountInCurrency(quote), 0),
+    pending: quotes.filter((quote) => ['pending','sent'].includes(quote.status)).length,
+    approved: quotes.filter((quote) => quote.status === 'approved').length,
+  };
   const chartData = months.map((month, index) => ({ month, total: quotes.filter((quote) => {const d=new Date(`${quote.date}T12:00:00`);return d.getMonth()===index&&d.getFullYear()===new Date().getFullYear();}).reduce((sum, quote) => sum + amountInCurrency(quote),0) }));
   const ranked = clients.map((client) => ({ client, total: quotes.filter((quote) => quote.clientId === client.id).reduce((sum, quote) => sum + amountInCurrency(quote),0) })).sort((a,b)=>b.total-a.total).slice(0,4);
   const latest = [...quotes].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);
   const activity = (quote) => { const client=clients.find((entry)=>entry.id===quote.clientId); return <div className="activity-row" key={quote.id}><div className="activity-icon"><FileText size={17}/></div><div className="activity-main"><Link to={`/cotizaciones/${quote.id}`}><strong>{quote.number}</strong></Link><span>{client?.businessName||client?.name||'Cliente eliminado'}</span></div><div className="activity-amount"><strong>{formatMoney(amountInCurrency(quote),currency)}</strong><StatusBadge status={quote.status}/></div></div>; };
+  if (loading) return <Spinner label="Cargando panel y cotizaciones…"/>;
+  if (error) return <Card className="form-section"><h2>No se pudo cargar el panel</h2><p>{error}</p><Button onClick={()=>window.location.reload()}>Intentar nuevamente</Button></Card>;
   return <><PageHeader eyebrow="VISTA GENERAL" title="Hola, Elizabeth" description="Cotiza tus confecciones, arreglos y prendas a medida desde un solo lugar." action={<div className="dashboard-actions"><label className="currency-picker"><span>Ver en</span><select value={currency} onChange={(e)=>setCurrency(e.target.value)} aria-label="Moneda de visualización"><option value="DOP">DOP · Peso dominicano</option><option value="USD">USD · Dólar estadounidense</option></select></label><Link className="btn btn-primary" to="/cotizaciones/nueva"><Plus size={17}/> Nueva cotización</Link></div>}/>
     <div className="stat-grid"><StatCard label="TOTAL COTIZADO" value={formatMoney(stats.total,currency)} detail={`${quotes.length} cotizaciones emitidas`} icon={Wallet} tone="olive"/><StatCard label="COTIZACIONES" value={quotes.length} detail={`${clients.length} clientes registrados`} icon={FileText} tone="sand"/><StatCard label="PENDIENTES" value={stats.pending} detail="Por revisar o responder" icon={Send} tone="amber"/><StatCard label="APROBADAS" value={stats.approved} detail="Propuestas aceptadas" icon={BadgeCheck} tone="green"/></div>
     <div className="dashboard-grid"><Card className="chart-card"><div className="section-heading"><div><div className="eyebrow">SEGUIMIENTO</div><h2>Cotizaciones mensuales</h2><p>Monto cotizado durante este año</p></div><span className="chart-legend"><i/> Cotizado</span></div><div className="chart-area"><ResponsiveContainer width="100%" height="100%"><BarChart data={chartData} margin={{top:12,right:6,left:4,bottom:0}}><defs><linearGradient id="oliveBar" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#8fae5d"/><stop offset="100%" stopColor="#536b32"/></linearGradient></defs><CartesianGrid vertical={false} stroke="#edf0e9"/><XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill:'#899184',fontSize:11}} dy={9}/><YAxis axisLine={false} tickLine={false} tick={{fill:'#899184',fontSize:10}} width={46} tickFormatter={(value)=>value>999?`${Math.round(value/1000)}k`:value}/><Tooltip formatter={(value)=>formatMoney(value,currency)} cursor={{fill:'#f4f6f0'}} contentStyle={{border:'1px solid #dce4d4',borderRadius:12,fontSize:12}}/><Bar dataKey="total" radius={[6,6,2,2]} maxBarSize={32}>{chartData.map((entry,index)=><Cell key={entry.month} fill={entry.total?'url(#oliveBar)':'#e9eee3'} opacity={index===new Date().getMonth()?1:.9}/>)}</Bar></BarChart></ResponsiveContainer></div></Card>

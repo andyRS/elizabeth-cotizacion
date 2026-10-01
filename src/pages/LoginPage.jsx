@@ -2,24 +2,36 @@ import { useState } from 'react';
 import { ArrowRight, Eye, EyeOff, FileText, LockKeyhole, ShieldCheck, Sprout } from 'lucide-react';
 import { authService } from '../services/authService.js';
 import '../styles/login.css';
+import { useEffect } from 'react';
 
-export default function LoginPage({ onSuccess }) {
+export default function LoginPage({ onSuccess, initialError = '' }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [visible, setVisible] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(initialError);
   const [submitting, setSubmitting] = useState(false);
 
-  const submit = (event) => {
+  useEffect(() => {
+    const onApiError = (event) => setError(event.detail || 'No se pudo conectar con la API.');
+    window.addEventListener('api:error', onApiError);
+    return () => window.removeEventListener('api:error', onApiError);
+  }, []);
+
+  const submit = async (event) => {
     event.preventDefault();
     setError('');
     setSubmitting(true);
-    if (authService.login(username, password)) {
-      onSuccess();
-      return;
+    try {
+      if (await authService.login(username, password)) {
+        onSuccess();
+        return;
+      }
+      setError('Usuario o contraseña incorrectos. Inténtalo de nuevo.');
+    } catch (exception) {
+      setError(exception.message || 'No se pudo conectar con el servidor.');
+    } finally {
+      setSubmitting(false);
     }
-    setSubmitting(false);
-    setError('Usuario o contraseña incorrectos. Inténtalo de nuevo.');
   };
 
   return <main className="login-page">
