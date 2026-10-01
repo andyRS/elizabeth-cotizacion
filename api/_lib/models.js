@@ -32,7 +32,7 @@ const quoteSchema = new Schema({
   currency: { type: String, enum: ['DOP', 'USD'], required: true },
   status: { type: String, enum: ['draft', 'pending', 'sent', 'approved', 'rejected'], default: 'draft' },
   items: { type: [itemSchema], required: true, validate: (items) => items.length > 0 && items.length <= 100 },
-  labor: { type: Number, min: 0, default: 0 },
+  labor: { type: Number, required: true, min: 0.01 },
   garmentImage: { type: String, maxlength: 750000, default: '' },
   detailImages: { type: [String], default: [], validate: (images) => images.length <= 2 && images.every((image) => image.length <= 400000) },
   notes: { type: String, maxlength: 5000, default: '' },

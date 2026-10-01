@@ -14,8 +14,7 @@ const steps = [
 
 function lineTotal(item) {
   const base = Number(item.quantity || 0) * Number(item.price || 0);
-  const discounted = base * (1 - Number(item.discount || 0) / 100);
-  return discounted * (1 + Number(item.tax || 0) / 100);
+  return base * (1 - Number(item.discount || 0) / 100);
 }
 
 export default function QuoteWizardModal({
@@ -93,14 +92,18 @@ export default function QuoteWizardModal({
         return;
       }
     }
-    if (step === 1 && form.items.some((item) => !item.description.trim() || Number(item.quantity) <= 0 || String(item.price).trim() === '' || !Number.isFinite(Number(item.price)) || Number(item.price) < 0 || Number(item.discount) < 0 || Number(item.discount) > 100 || Number(item.tax) < 0 || Number(item.tax) > 100)) {
-      setStepError('Revisa el nombre, la cantidad y el precio de cada tela.');
+    if (step === 1 && (!form.items.length || form.items.some((item) => !item.description.trim() || Number(item.quantity) <= 0 || String(item.price).trim() === '' || !Number.isFinite(Number(item.price)) || Number(item.price) < 0 || Number(item.discount) < 0 || Number(item.discount) > 100))) {
+      setStepError('Agrega al menos una tela y revisa el nombre, la cantidad y el precio de cada una.');
       return;
     }
     setStep(Math.min(step + 1, steps.length - 1));
   };
 
   const save = async (status) => {
+    if (!Number.isFinite(Number(form.labor)) || Number(form.labor) <= 0) {
+      setStepError('La mano de obra es obligatoria. Indica un importe mayor que cero.');
+      return;
+    }
     setSaving(true);
     setStepError('');
     try {
@@ -151,26 +154,27 @@ export default function QuoteWizardModal({
           <div className="quote-wizard-panel-heading"><span>DETALLE DE MATERIALES</span><h2 id="quote-step-two-title">¿Qué tela y cuánta necesitas?</h2><p>Escribe un material por línea. La cantidad puede llevar decimales, por ejemplo 1.5 yardas.</p></div>
           <div className="quote-wizard-materials">
             {form.items.map((item, index) => <article className="quote-wizard-material" key={item.id}>
-              <div className="quote-wizard-material-heading"><strong>Tela o material {index + 1}</strong><button className="icon-button icon-danger" type="button" onClick={() => onRemoveLine(item.id)} aria-label={`Quitar material ${index + 1}`} disabled={form.items.length === 1}><Trash2 size={15}/></button></div>
+              <div className="quote-wizard-material-heading"><strong>Tela o material {index + 1}</strong><button className="icon-button icon-danger" type="button" onClick={() => onRemoveLine(item.id)} aria-label={`Quitar material ${index + 1}`}><Trash2 size={15}/></button></div>
               <div className="quote-wizard-material-fields">
                 <Field label="Nombre de la tela"><input placeholder="Ej. Lycra Everlast" value={item.description} onChange={(event) => onUpdateItem(item.id, 'description', event.target.value)} aria-label={`Nombre del material ${index + 1}`} required/></Field>
                 <Field label="Cantidad"><input type="number" min="0.01" step="0.01" value={item.quantity} onChange={(event) => onUpdateItem(item.id, 'quantity', event.target.value)} aria-label={`Cantidad del material ${index + 1}`} required/></Field>
                 <Field label="Unidad de medida"><Select value={item.unit || 'yardas'} onChange={(event) => onUpdateItem(item.id, 'unit', event.target.value)} aria-label={`Unidad del material ${index + 1}`}>{MEASUREMENT_UNITS.map((unit) => <option key={unit.value} value={unit.value}>{unit.label}</option>)}</Select></Field>
                 <Field label={`Precio por ${selectedUnit(item.unit).label.toLowerCase()}`}><input type="number" min="0" step="0.01" value={item.price} onChange={(event) => onUpdateItem(item.id, 'price', event.target.value)} aria-label={`Precio por unidad del material ${index + 1}`} required/></Field>
               </div>
-              <details className="quote-wizard-item-options"><summary>Descuento o impuesto (opcional)</summary><div className="quote-wizard-fields"><Field label="Descuento %"><input type="number" min="0" max="100" step="0.01" value={item.discount} onChange={(event) => onUpdateItem(item.id, 'discount', event.target.value)} aria-label={`Descuento del material ${index + 1}`}/></Field><Field label="Impuesto %"><input type="number" min="0" max="100" step="0.01" value={item.tax} onChange={(event) => onUpdateItem(item.id, 'tax', event.target.value)} aria-label={`Impuesto del material ${index + 1}`}/></Field></div></details>
-              <div className="quote-wizard-line-total"><span>{formatQuantity(item.quantity, item.unit || 'yardas')} · Impuesto {Number(item.tax || 0)}%</span><strong>{formatMoney(lineTotal(item), form.currency)}</strong></div>
+              <details className="quote-wizard-item-options"><summary>Agregar descuento (opcional)</summary><div className="quote-wizard-fields quote-wizard-discount"><Field label="Descuento %"><input type="number" min="0" max="100" step="0.01" value={item.discount} onChange={(event) => onUpdateItem(item.id, 'discount', event.target.value)} aria-label={`Descuento del material ${index + 1}`}/></Field></div></details>
+              <div className="quote-wizard-line-total"><span>{formatQuantity(item.quantity, item.unit || 'yardas')}</span><strong>{formatMoney(lineTotal(item), form.currency)}</strong></div>
             </article>)}
           </div>
           <Button type="button" variant="outline" onClick={onAddLine}><CirclePlus size={16}/> Agregar otra tela</Button>
+          {!form.items.length && <p className="quote-wizard-empty-materials">Aún no hay telas. Agrega una para continuar.</p>}
         </section>}
 
         {step === 2 && <section className="quote-wizard-panel" aria-labelledby="quote-step-three-title">
           <div className="quote-wizard-panel-heading"><span>ÚLTIMO PASO</span><h2 id="quote-step-three-title">Revisa tu cotización</h2><p>Confirma las cantidades y el total. Puedes guardar un borrador si aún te falta algo.</p></div>
           <div className="quote-wizard-review-table"><div className="quote-wizard-review-head"><span>TELA / MATERIAL</span><span>CANTIDAD</span><span>PRECIO / UNIDAD</span><span>TOTAL</span></div>{form.items.map((item) => <div className="quote-wizard-review-row" key={item.id}><strong>{item.description}</strong><span>{formatQuantity(item.quantity, item.unit || 'yardas')}</span><span>{formatMoney(item.price, form.currency)}</span><strong>{formatMoney(lineTotal(item), form.currency)}</strong></div>)}</div>
           <div className="quote-wizard-review-bottom">
-            <Field label="Mano de obra (opcional)"><input type="number" min="0" step="0.01" value={form.labor ?? 0} onChange={(event) => onUpdate('labor', event.target.value)} aria-label="Costo de mano de obra"/></Field>
-            <div className="quote-wizard-totals"><div><span>Materiales</span><strong>{formatMoney(totals.subtotal, form.currency)}</strong></div>{totals.discount > 0 && <div><span>Descuento</span><strong>− {formatMoney(totals.discount, form.currency)}</strong></div>}{totals.tax > 0 && <div><span>Impuestos</span><strong>{formatMoney(totals.tax, form.currency)}</strong></div>}<div><span>Mano de obra</span><strong>{formatMoney(totals.labor, form.currency)}</strong></div><div className="quote-wizard-grand-total"><span>Total</span><strong>{formatMoney(totals.total, form.currency)}</strong></div></div>
+            <Field label="Mano de obra obligatoria" hint="Indica un importe mayor que cero."><input type="number" min="0.01" step="0.01" value={form.labor ?? ''} onChange={(event) => onUpdate('labor', event.target.value)} aria-label="Costo de mano de obra" required/></Field>
+            <div className="quote-wizard-totals"><div><span>Materiales</span><strong>{formatMoney(totals.subtotal, form.currency)}</strong></div>{totals.discount > 0 && <div><span>Descuento</span><strong>− {formatMoney(totals.discount, form.currency)}</strong></div>}<div><span>Mano de obra</span><strong>{formatMoney(totals.labor, form.currency)}</strong></div><div className="quote-wizard-grand-total"><span>Total</span><strong>{formatMoney(totals.total, form.currency)}</strong></div></div>
           </div>
           <details className="quote-wizard-extras"><summary>Agregar notas, condiciones o fotos (opcional)</summary><div className="quote-wizard-extra-fields"><Field label="Notas para el cliente"><textarea rows="3" placeholder="Escribe aquí cualquier detalle útil." value={form.notes} onChange={(event) => onUpdate('notes', event.target.value)}/></Field><Field label="Términos y condiciones"><textarea rows="3" placeholder="Por ejemplo, vigencia o forma de pago." value={form.terms} onChange={(event) => onUpdate('terms', event.target.value)}/></Field><PhotoAttachments garmentImage={form.garmentImage} detailImages={form.detailImages} onChange={onPhotosChange}/></div></details>
         </section>}

@@ -33,6 +33,7 @@
 .quote-wizard-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
 .quote-wizard-date-fields{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:20px;padding-top:19px;border-top:1px solid #edf0e9}
 .quote-wizard-materials{display:grid;gap:12px;margin-bottom:13px}
+.quote-wizard-empty-materials{margin:0;color:#9b645c;font-size:10px}
 .quote-wizard-material{padding:15px 16px 12px;border:1px solid #e4eae0;border-radius:9px;background:#fff}
 .quote-wizard-material-heading{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px}
 .quote-wizard-material-heading>strong{color:#47543e;font-size:11px}

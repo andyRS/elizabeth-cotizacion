@@ -47,6 +47,7 @@ test('EATELIERM PDF uses its branded quotation filename and produces one A4 page
   assert.equal(quotePdfFileName(quote, { name: 'Ingrid Peralta' }), 'Cotizacion-EATELIERM-COT-000042-Ingrid-Peralta.pdf');
   assert.equal(pdf.getNumberOfPages(), 1);
   assert.ok(pdf.output('arraybuffer').byteLength > 3000);
+  assert.doesNotMatch(pdf.output(), /Impuestos/);
 });
 
 test('EATELIERM PDF embeds optional garment and fabric reference images', async () => {
@@ -63,6 +64,11 @@ test('quote totals include sewing labor without changing material subtotal', () 
   assert.equal(totals.total, 13050);
 });
 
+test('legacy item taxes are ignored in quotation totals', () => {
+  const totals = quoteTotals([{ quantity: 2, price: 100, tax: 18 }], 25);
+  assert.deepEqual(totals, { subtotal: 200, discount: 0, total: 225, labor: 25 });
+});
+
 test('fabric quantities format common fractions and measurement units', () => {
   assert.equal(formatQuantity(1.5), '1 1/2 yardas');
   assert.equal(formatQuantity(0.75, 'metros'), '3/4 metros');
@@ -73,6 +79,11 @@ test('quote schema accepts optional reference and material photos without requir
   const document = new Quote({ ...quote, clientId: '507f1f77bcf86cd799439011' });
   assert.equal(document.validateSync(), undefined);
   assert.equal(document.items[1].unit, 'yardas');
+});
+
+test('quote schema requires a positive labor amount', () => {
+  const document = new Quote({ ...quote, labor: 0, clientId: '507f1f77bcf86cd799439011' });
+  assert.ok(document.validateSync()?.errors.labor);
 });
 
 test('quote schema limits material detail images to two', () => {

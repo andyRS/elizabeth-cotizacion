@@ -12,7 +12,6 @@ export const DEFAULT_SETTINGS = {
   prefix: 'COT',
   nextNumber: 1,
   defaultCurrency: 'DOP',
-  defaultTax: 18,
   defaultValidity: 15,
   defaultNotes: 'Gracias por confiar en mi trabajo de costura. Estoy a tu disposición para cualquier ajuste.',
   defaultTerms: 'La cotización tiene una validez de 15 días. El inicio del trabajo se coordina al aprobar el diseño, las medidas y los materiales.',

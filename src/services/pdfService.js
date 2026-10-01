@@ -120,8 +120,7 @@ export async function createQuotePdf(quote, client, settingsOverride) {
     body: quote.items.map((item) => {
       const base = Number(item.quantity) * Number(item.price);
       const discount = base * Number(item.discount || 0) / 100;
-      const tax = (base - discount) * Number(item.tax || 0) / 100;
-      return [formatQuantity(item.quantity, item.unit || 'yardas'), item.description, formatMoney(item.price, quote.currency), formatMoney(base - discount + tax, quote.currency)];
+      return [formatQuantity(item.quantity, item.unit || 'yardas'), item.description, formatMoney(item.price, quote.currency), formatMoney(base - discount, quote.currency)];
     }),
     theme: 'grid',
     headStyles: { fillColor: GREEN, textColor: 255, font: 'helvetica', fontStyle: 'bold', fontSize: 8, cellPadding: 3.2 },
@@ -134,7 +133,6 @@ export async function createQuotePdf(quote, client, settingsOverride) {
   const summaryRows = [
     ['Total de material', totals.subtotal],
     ...(totals.discount ? [['Descuento', -totals.discount]] : []),
-    ...(totals.tax ? [['Impuestos', totals.tax]] : []),
     ['Mano de obra', totals.labor],
     ['TOTAL', totals.total],
   ];
