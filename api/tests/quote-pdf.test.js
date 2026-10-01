@@ -42,14 +42,14 @@ const quote = {
   terms: '',
 };
 
-test('AtelierM PDF uses the new AtelierM quotation filename and produces one A4 page when no photos are attached', async () => {
+test('EATELIERM PDF uses its branded quotation filename and produces one A4 page without photos', async () => {
   const pdf = await createQuotePdf(quote, { name: 'Ingrid Peralta' }, settings);
-  assert.equal(quotePdfFileName(quote, { name: 'Ingrid Peralta' }), 'Cotizacion-AtelierM-COT-000042-Ingrid-Peralta.pdf');
+  assert.equal(quotePdfFileName(quote, { name: 'Ingrid Peralta' }), 'Cotizacion-EATELIERM-COT-000042-Ingrid-Peralta.pdf');
   assert.equal(pdf.getNumberOfPages(), 1);
   assert.ok(pdf.output('arraybuffer').byteLength > 3000);
 });
 
-test('AtelierM PDF embeds optional garment and fabric reference images', async () => {
+test('EATELIERM PDF embeds optional garment and fabric reference images', async () => {
   const tinyPng = `data:image/png;base64,${makePixelPng()}`;
   const pdf = await createQuotePdf({ ...quote, garmentImage: tinyPng, detailImages: [tinyPng] }, { name: 'Ingrid Peralta' }, settings);
   assert.equal(pdf.getNumberOfPages(), 1);

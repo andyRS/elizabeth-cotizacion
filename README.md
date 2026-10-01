@@ -2,7 +2,7 @@
 
 Sistema independiente para cotizar confecciones, prendas a medida y arreglos. Aplicación React/Vite, API Node/Express como Vercel Function y persistencia MongoDB Atlas.
 
-Las cotizaciones admiten una foto de referencia del vestido y hasta dos imágenes de materiales; se comprimen en el navegador, se guardan en MongoDB y aparecen en un PDF A4 con diseño AtelierM. El archivo descargado usa el formato `Cotizacion-AtelierM-COT-000001-Nombre-Cliente.pdf`.
+Las cotizaciones admiten una foto de referencia del vestido y hasta dos imágenes de materiales; se comprimen en el navegador, se guardan en MongoDB y aparecen en un PDF A4 con diseño EATELIERM. El nombre EATELIERM usa lettering manuscrito; tabla y cifras conservan tipografía legible. El archivo descargado usa el formato `Cotizacion-EATELIERM-COT-000001-Nombre-Cliente.pdf`.
 
 ## Importante: base de datos vacía
 

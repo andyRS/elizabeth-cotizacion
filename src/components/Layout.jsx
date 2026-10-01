@@ -24,7 +24,7 @@ export default function Layout({ onLogout }) {
   return <div className="app-shell">
     {mobileOpen && <button className="mobile-backdrop" aria-label="Cerrar navegación" onClick={() => setMobileOpen(false)}/>}
     <aside className={`sidebar ${mobileOpen ? 'sidebar-open' : ''}`}>
-      <div className="brand-lockup"><div className="brand-mark">AM</div><div className="brand-copy"><strong>ATELIERM</strong><span>COTIZACIONES</span></div><button className="mobile-close" onClick={() => setMobileOpen(false)} aria-label="Cerrar menú"><X size={19}/></button></div>
+      <div className="brand-lockup"><div className="brand-mark">EM</div><div className="brand-copy"><strong>EATELIERM</strong><span>COTIZACIONES</span></div><button className="mobile-close" onClick={() => setMobileOpen(false)} aria-label="Cerrar menú"><X size={19}/></button></div>
       <div className="nav-caption">TALLER DE COSTURA</div>
       <nav className="side-nav" aria-label="Navegación principal">{navigation.map(({to,label,icon:Icon,end})=><NavLink key={to} to={to} end={end} onClick={()=>setMobileOpen(false)} className={({isActive})=>`nav-link ${isActive?'nav-link-active':''}`}><Icon size={18} strokeWidth={1.8}/><span>{label}</span>{label==='Cotizaciones'&&<ChevronRight className="nav-chevron" size={15}/>}</NavLink>)}</nav>
       <div className="sidebar-spacer"/>

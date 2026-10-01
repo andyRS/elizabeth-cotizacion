@@ -37,24 +37,48 @@ function outlinedBox(doc, x, y, width, height, radius = 3) {
   doc.roundedRect(x, y, width, height, radius, radius, 'S');
 }
 
-function printHeader(doc, quote, client, settings) {
+async function createScriptWordmark(text) {
+  if (typeof document === 'undefined') return null;
+  try {
+    await document.fonts.load('700 190px "Dancing Script"');
+    const canvas = document.createElement('canvas');
+    canvas.width = 1150;
+    canvas.height = 260;
+    const context = canvas.getContext('2d');
+    if (!context) return null;
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = `rgb(${GREEN.join(',')})`;
+    context.textAlign = 'left';
+    context.textBaseline = 'middle';
+    context.font = '700 190px "Dancing Script"';
+    context.fillText(text, 8, 132, canvas.width - 16);
+    return canvas.toDataURL('image/png');
+  } catch {
+    return null;
+  }
+}
+
+async function printHeader(doc, quote, client, settings) {
   const pageWidth = doc.internal.pageSize.getWidth();
-  doc.setTextColor(...GREEN);
-  doc.setFont('times', 'italic');
-  doc.setFontSize(31);
-  doc.text('AtelierM', 16, 24);
+  const wordmark = await createScriptWordmark('EATELIERM');
+  if (!addCoverImage(doc, wordmark, 16, 7, 83, 25)) {
+    doc.setTextColor(...GREEN);
+    doc.setFont('times', 'italic');
+    doc.setFontSize(27);
+    doc.text('EATELIERM', 16, 24);
+  }
   doc.setTextColor(...DARK_GREEN);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
-  doc.text('C O T I Z A C I Ó N', 17, 32);
+  doc.text('C O T I Z A C I Ó N', 17, 34);
   doc.setDrawColor(...GREEN);
   doc.setLineWidth(0.8);
-  doc.line(16, 35, 99, 35);
+  doc.line(16, 37, 99, 37);
   doc.setTextColor(...MUTED);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
-  doc.text(settings.businessName || 'Elizabeth Méndez', 17, 40);
-  doc.text(settings.phone || settings.email || 'Costura y confección', 17, 44);
+  doc.text(settings.businessName || 'Elizabeth Méndez', 17, 42);
+  doc.text(settings.phone || settings.email || 'Costura y confección', 17, 46);
 
   const boxX = pageWidth - 83;
   const boxY = 10;
@@ -88,7 +112,7 @@ export async function createQuotePdf(quote, client, settingsOverride) {
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const totals = quoteTotals(quote.items, quote.labor);
-  printHeader(doc, quote, client, settings);
+  await printHeader(doc, quote, client, settings);
 
   autoTable(doc, {
     startY: 53,
@@ -173,7 +197,7 @@ export async function createQuotePdf(quote, client, settingsOverride) {
     doc.text('¡Gracias por', rightX + rightWidth / 2, photoY + 42, { align: 'center' });
     doc.text('confiar en', rightX + rightWidth / 2, photoY + 53, { align: 'center' });
     doc.setFontSize(27);
-    doc.text('AtelierM!', rightX + rightWidth / 2, photoY + 67, { align: 'center' });
+    doc.text('EATELIERM!', rightX + rightWidth / 2, photoY + 67, { align: 'center' });
     doc.setDrawColor(...GREEN);
     doc.setLineWidth(0.8);
     doc.line(rightX + 19, photoY + 72, rightX + rightWidth - 19, photoY + 72);
@@ -187,7 +211,7 @@ export async function createQuotePdf(quote, client, settingsOverride) {
     doc.setTextColor(...DARK_GREEN);
     doc.setFont('times', 'italic');
     doc.setFontSize(19);
-    doc.text('¡Gracias por confiar en AtelierM!', pageWidth / 2, photoY + 20, { align: 'center' });
+    doc.text('¡Gracias por confiar en EATELIERM!', pageWidth / 2, photoY + 20, { align: 'center' });
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     doc.setTextColor(...MUTED);
@@ -218,7 +242,7 @@ export async function createQuotePdf(quote, client, settingsOverride) {
 
 export function quotePdfFileName(quote, client) {
   const slug = (client?.businessName || client?.name || 'Cliente').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '');
-  return `Cotizacion-AtelierM-${quote.number}-${slug}.pdf`;
+  return `Cotizacion-EATELIERM-${quote.number}-${slug}.pdf`;
 }
 
 export async function downloadQuotePdf(quote, client) {
